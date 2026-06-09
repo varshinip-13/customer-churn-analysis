@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Customer Churn Analysis Dashboard</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f3; color: #1a1a18; padding: 24px; }
+  h1 { font-size: 20px; font-weight: 500; margin-bottom: 4px; }
+  .subtitle { font-size: 13px; color: #888780; margin-bottom: 24px; }
+  .section-label { font-size: 11px; color: #888780; text-transform: uppercase; letter-spacing: 0.07em; margin: 0 0 10px; font-weight: 500; }
+  .metric-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
+  .metric { background: #ebebeb; border-radius: 8px; padding: 14px 16px; }
+  .metric-label { font-size: 12px; color: #888780; margin-bottom: 4px; }
+  .metric-value { font-size: 22px; font-weight: 500; }
+  .metric-delta { font-size: 11px; margin-top: 3px; }
+  .up { color: #A32D2D; } .dn { color: #3B6D11; } .nt { color: #888780; }
+  .chart-card { background: #fff; border: 0.5px solid #d3d1c7; border-radius: 12px; padding: 16px 18px; margin-bottom: 12px; }
+  .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .chart-title { font-size: 14px; font-weight: 500; margin-bottom: 8px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 8px; font-size: 12px; color: #888780; }
+  .legend span { display: flex; align-items: center; gap: 4px; }
+  .sw { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+  .factor-list { list-style: none; }
+  .fi { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 0.5px solid #e8e6e0; }
+  .fi:last-child { border-bottom: none; }
+  .fr { font-size: 13px; font-weight: 500; color: #888780; width: 20px; }
+  .fn { flex: 1; font-size: 13px; }
+  .fbw { width: 140px; height: 6px; background: #f0ede6; border-radius: 3px; overflow: hidden; }
+  .fb { height: 100%; border-radius: 3px; }
+  .fp { font-size: 12px; color: #888780; width: 36px; text-align: right; }
+  .seg-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .seg-table th { text-align: left; font-size: 11px; font-weight: 500; color: #888780; padding: 6px 8px; border-bottom: 0.5px solid #d3d1c7; }
+  .seg-table td { padding: 8px; border-bottom: 0.5px solid #e8e6e0; }
+  .seg-table tr:last-child td { border-bottom: none; }
+  .pill { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 20px; }
+  .pr { background: #FCEBEB; color: #A32D2D; }
+  .pa { background: #FAEEDA; color: #854F0B; }
+  .pg { background: #EAF3DE; color: #3B6D11; }
+  .reco-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+  .rc { border: 0.5px solid #d3d1c7; border-radius: 12px; padding: 14px 16px; background: #fff; }
+  .rc-title { font-size: 13px; font-weight: 500; margin-bottom: 4px; }
+  .rc-desc { font-size: 12px; color: #5a5955; line-height: 1.5; }
+  .badge { display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 6px; margin-top: 6px; }
+  .bh { background: #FCEBEB; color: #A32D2D; }
+  .bm { background: #FAEEDA; color: #854F0B; }
+  .bl { background: #EAF3DE; color: #3B6D11; }
+  @media (max-width: 640px) {
+    .metric-grid { grid-template-columns: 1fr 1fr; }
+    .chart-row, .reco-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<h1>Customer Churn Analysis</h1>
+<p class="subtitle">Subscription cancellation patterns · engagement trends · retention opportunities</p>
+
+<p class="section-label">Overview — last 30 days</p>
+<div class="metric-grid">
+  <div class="metric">
+    <div class="metric-label">Monthly churn rate</div>
+    <div class="metric-value">8.4%</div>
+    <div class="metric-delta up">▲ +1.2pp vs prior month</div>
+  </div>
+  <div class="metric">
+    <div class="metric-label">Churned users</div>
+    <div class="metric-value">1,247</div>
+    <div class="metric-delta up">▲ +18% MoM</div>
+  </div>
+  <div class="metric">
+    <div class="metric-label">Avg tenure at churn</div>
+    <div class="metric-value">4.2 mo</div>
+    <div class="metric-delta nt">— stable</div>
+  </div>
+  <div class="metric">
+    <div class="metric-label">MRR at risk</div>
+    <div class="metric-value">$94K</div>
+    <div class="metric-delta up">▲ growing</div>
+  </div>
+</div>
+
+<div class="chart-row">
+  <div class="chart-card">
+    <div class="chart-title">Churn rate trend</div>
+    <div style="position:relative;width:100%;height:180px">
+      <canvas id="cTrend" role="img" aria-label="Churn rising from 5.1% in Jan to 8.4% in Jun">Jan 5.1%, Feb 5.6%, Mar 6.0%, Apr 6.8%, May 7.2%, Jun 8.4%.</canvas>
+    </div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">Churn by subscription tier</div>
+    <div class="legend">
+      <span><span class="sw" style="background:#378ADD"></span>Basic</span>
+      <span><span class="sw" style="background:#D85A30"></span>Pro</span>
+      <span><span class="sw" style="background:#1D9E75"></span>Enterprise</span>
+    </div>
+    <div style="position:relative;width:100%;height:150px">
+      <canvas id="cTier" role="img" aria-label="Basic 14%, Pro 8%, Enterprise 2%">Basic 14%, Pro 8%, Enterprise 2%.</canvas>
+    </div>
+  </div>
+</div>
+
+<div class="chart-row">
+  <div class="chart-card">
+    <div class="chart-title">Exit survey — churn reasons</div>
+    <div class="legend">
+      <span><span class="sw" style="background:#E24B4A"></span>Price 34%</span>
+      <span><span class="sw" style="background:#378ADD"></span>Features 28%</span>
+      <span><span class="sw" style="background:#EF9F27"></span>Bugs 21%</span>
+      <span><span class="sw" style="background:#888780"></span>Other 17%</span>
+    </div>
+    <div style="position:relative;width:100%;height:160px">
+      <canvas id="cReason" role="img" aria-label="Donut: Price 34%, Missing features 28%, Bugs 21%, Other 17%">Price 34%, missing features 28%, bugs 21%, other 17%.</canvas>
+    </div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">Engagement score vs churn rate</div>
+    <div style="position:relative;width:100%;height:160px">
+      <canvas id="cScatter" role="img" aria-label="Scatter showing strong negative correlation between engagement and churn">Higher engagement predicts lower churn.</canvas>
+    </div>
+  </div>
+</div>
+
+<div class="chart-card">
+  <div class="chart-title">Top behavioral churn drivers</div>
+  <ul class="factor-list">
+    <li class="fi"><span class="fr">1</span><span class="fn">No login within 14 days</span><div class="fbw"><div class="fb" style="width:88%;background:#E24B4A"></div></div><span class="fp">88%</span></li>
+    <li class="fi"><span class="fr">2</span><span class="fn">Fewer than 3 core feature uses/week</span><div class="fbw"><div class="fb" style="width:74%;background:#EF9F27"></div></div><span class="fp">74%</span></li>
+    <li class="fi"><span class="fr">3</span><span class="fn">Contacted support 2+ times</span><div class="fbw"><div class="fb" style="width:63%;background:#EF9F27"></div></div><span class="fp">63%</span></li>
+    <li class="fi"><span class="fr">4</span><span class="fn">Skipped onboarding steps</span><div class="fbw"><div class="fb" style="width:58%;background:#378ADD"></div></div><span class="fp">58%</span></li>
+    <li class="fi"><span class="fr">5</span><span class="fn">Single-user account (no collaboration)</span><div class="fbw"><div class="fb" style="width:47%;background:#378ADD"></div></div><span class="fp">47%</span></li>
+    <li class="fi"><span class="fr">6</span><span class="fn">Never connected integration or API</span><div class="fbw"><div class="fb" style="width:41%;background:#888780"></div></div><span class="fp">41%</span></li>
+  </ul>
+</div>
+
+<div class="chart-card">
+  <div class="chart-title">At-risk user segments</div>
+  <table class="seg-table">
+    <thead>
+      <tr><th>Segment</th><th>Users</th><th>Churn rate</th><th>Engagement</th><th>Risk</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Basic — month 1–2</td><td>3,410</td><td>18.2%</td><td>Low</td><td><span class="pill pr">Critical</span></td></tr>
+      <tr><td>Pro — solo users</td><td>1,820</td><td>12.7%</td><td>Medium</td><td><span class="pill pr">High</span></td></tr>
+      <tr><td>Basic — month 3–6</td><td>5,200</td><td>9.4%</td><td>Medium</td><td><span class="pill pa">Moderate</span></td></tr>
+      <tr><td>Pro — small team (2–5)</td><td>2,140</td><td>5.1%</td><td>High</td><td><span class="pill pa">Watch</span></td></tr>
+      <tr><td>Enterprise — all tiers</td><td>480</td><td>1.9%</td><td>Very high</td><td><span class="pill pg">Stable</span></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<p class="section-label" style="margin-top:20px">Retention recommendations</p>
+<div class="reco-grid">
+  <div class="rc">
+    <div class="rc-title">Fix onboarding drop-off</div>
+    <div class="rc-desc">58% of churned users skipped onboarding. Add interactive checklists, contextual tooltips, and a 7-day activation email sequence tied to feature milestones.</div>
+    <span class="badge bh">High impact</span>
+  </div>
+  <div class="rc">
+    <div class="rc-title">Re-engagement triggers</div>
+    <div class="rc-desc">Auto-flag accounts with no login in 7 days. Send personalized win-back campaigns at day 10; offer a 1:1 check-in call at day 14 before risk escalates.</div>
+    <span class="badge bh">High impact</span>
+  </div>
+  <div class="rc">
+    <div class="rc-title">Drive collaboration adoption</div>
+    <div class="rc-desc">Solo Pro users churn 2.5× more than team accounts. Prompt users to invite teammates within 72 hrs and offer a referral incentive for new seat invites.</div>
+    <span class="badge bm">Medium impact</span>
+  </div>
+  <div class="rc">
+    <div class="rc-title">Accelerate integration setup</div>
+    <div class="rc-desc">Users with 1+ integration churn at 3.2% vs 11.8%. Add an in-app integration wizard and surface recommended integrations on the new-user dashboard.</div>
+    <span class="badge bm">Medium impact</span>
+  </div>
+  <div class="rc">
+    <div class="rc-title">Address price sensitivity</div>
+    <div class="rc-desc">34% cite price as exit reason. Consider usage-based pricing tiers, annual plan discounts (15–20%), and a lightweight free tier as a long-term retention hook.</div>
+    <span class="badge bm">Medium impact</span>
+  </div>
+  <div class="rc">
+    <div class="rc-title">Proactive support follow-up</div>
+    <div class="rc-desc">Users who opened 2+ support tickets show 63% churn likelihood. Route them to a CSM automatically and follow up within 24 hrs of every ticket close.</div>
+    <span class="badge bl">Quick win</span>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+Chart.defaults.color = '#888780';
+
+new Chart(document.getElementById('cTrend'), {
+  type: 'line',
+  data: {
+    labels: ['Jan','Feb','Mar','Apr','May','Jun'],
+    datasets: [{ label: 'Churn %', data: [5.1,5.6,6.0,6.8,7.2,8.4], borderColor: '#E24B4A', backgroundColor: 'rgba(226,75,74,0.08)', borderWidth: 2, pointRadius: 3, fill: true, tension: 0.3 }]
+  },
+  options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 4, max: 10, ticks: { callback: v => v+'%', font: { size: 11 } }, grid: { color: 'rgba(0,0,0,0.06)' } }, x: { ticks: { font: { size: 11 } }, grid: { display: false } } } }
+});
+
+new Chart(document.getElementById('cTier'), {
+  type: 'bar',
+  data: { labels: ['Basic','Pro','Enterprise'], datasets: [{ data: [14,8,2], backgroundColor: ['#378ADD','#D85A30','#1D9E75'], borderRadius: 4 }] },
+  options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => v+'%', font: { size: 11 } }, grid: { color: 'rgba(0,0,0,0.06)' } }, x: { ticks: { font: { size: 11 } }, grid: { display: false } } } }
+});
+
+new Chart(document.getElementById('cReason'), {
+  type: 'doughnut',
+  data: { labels: ['Price','Missing features','Bugs/reliability','Other'], datasets: [{ data: [34,28,21,17], backgroundColor: ['#E24B4A','#378ADD','#EF9F27','#888780'], borderWidth: 2, borderColor: '#fff' }] },
+  options: { responsive: true, maintainAspectRatio: false, cutout: '60%', plugins: { legend: { display: false } } }
+});
+
+new Chart(document.getElementById('cScatter'), {
+  type: 'scatter',
+  data: { datasets: [{ label: 'User cohorts', data: [{x:10,y:22},{x:18,y:18},{x:25,y:15},{x:35,y:11},{x:45,y:8},{x:55,y:6},{x:65,y:4},{x:75,y:3},{x:82,y:2},{x:90,y:1.5}], backgroundColor: '#7F77DD', pointRadius: 5 }] },
+  options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { min: 0, max: 100, title: { display: true, text: 'Engagement score', font: { size: 11 } }, ticks: { font: { size: 11 } }, grid: { color: 'rgba(0,0,0,0.06)' } }, y: { min: 0, max: 25, title: { display: true, text: 'Churn rate %', font: { size: 11 } }, ticks: { callback: v => v+'%', font: { size: 11 } }, grid: { color: 'rgba(0,0,0,0.06)' } } } }
+});
+</script>
+</body>
+</html>
